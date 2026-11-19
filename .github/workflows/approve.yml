@@ -1,0 +1,40 @@
+# 维护者给申请 Issue 加上 `approved` 标签 → 自动邀请申请人加入组织里的维护者团队。
+# 只有有仓库管理权限的人才能加标签，所以外人没法自己批准自己。
+#
+# 需要配置（仓库 Settings → Secrets and variables → Actions）：
+#   Secret   INVITE_TOKEN  组织 Owner 的 fine-grained token，Resource owner 选这个组织，
+#                          Organization permissions → Members: Read and write
+#   Variable TEAM_SLUG     维护者团队的 slug（默认 maintainers）
+name: 批准申请
+on:
+  issues:
+    types: [labeled]
+permissions:
+  issues: write
+jobs:
+  invite:
+    if: github.event.label.name == 'approved' && contains(github.event.issue.labels.*.name, '申请')
+    runs-on: ubuntu-latest
+    steps:
+      - name: 邀请加入团队
+        env:
+          GH_TOKEN: ${{ secrets.INVITE_TOKEN }}
+          ORG: ${{ github.repository_owner }}
+          TEAM: ${{ vars.TEAM_SLUG || 'maintainers' }}
+          APPLICANT: ${{ github.event.issue.user.login }}
+        run: |
+          gh api -X PUT "orgs/$ORG/teams/$TEAM/memberships/$APPLICANT" -f role=member --jq '.state'
+      - name: 回复并关闭
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPLICANT: ${{ github.event.issue.user.login }}
+          ORG: ${{ github.repository_owner }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" -R "${{ github.repository }}" --body "@$APPLICANT 已批准 🎉 邀请已发出：请查看邮箱，或打开 https://github.com/orgs/$ORG/invitation 点 **Join** 接受（7 天内有效）。"
+          gh issue close "${{ github.event.issue.number }}" -R "${{ github.repository }}" --reason completed
+      - name: 失败时提示
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" -R "${{ github.repository }}" --body "自动邀请没有成功，维护者会手动处理。"

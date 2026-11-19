@@ -1,0 +1,36 @@
+name: 申请加入
+description: 申请访问上科大出国报销 skill 仓库
+title: "申请加入：@"
+labels: ["申请"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        系统会自动用你提交时的 GitHub 账号发邀请，不需要填邮箱。
+        **这个页面是公开的，不要写学号、手机号等个人信息。**
+  - type: dropdown
+    id: who
+    attributes:
+      label: 你是
+      options: [上科大在读学生, 上科大教职工, 其他]
+    validations:
+      required: true
+  - type: input
+    id: school
+    attributes:
+      label: 学院（选填）
+      placeholder: 信息学院
+  - type: textarea
+    id: why
+    attributes:
+      label: 打算怎么用（选填）
+      placeholder: 例如：12 月去开会，回来要报销
+  - type: checkboxes
+    id: agree
+    attributes:
+      label: 确认
+      options:
+        - label: 我会遵守 skill 仓库的隐私规则，不提交任何真实个人信息
+          required: true
+        - label: 仓库里的学院资料只在成员之间使用，不外传
+          required: true
