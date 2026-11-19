@@ -17,20 +17,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 邀请加入团队
+        id: invite
         env:
           GH_TOKEN: ${{ secrets.INVITE_TOKEN }}
           ORG: ${{ github.repository_owner }}
           TEAM: ${{ vars.TEAM_SLUG || 'maintainers' }}
           APPLICANT: ${{ github.event.issue.user.login }}
         run: |
-          gh api -X PUT "orgs/$ORG/teams/$TEAM/memberships/$APPLICANT" -f role=member --jq '.state'
+          state=$(gh api -X PUT "orgs/$ORG/teams/$TEAM/memberships/$APPLICANT" -f role=member --jq '.state')
+          echo "state=$state" >> "$GITHUB_OUTPUT"
       - name: 回复并关闭
         env:
           GH_TOKEN: ${{ github.token }}
           APPLICANT: ${{ github.event.issue.user.login }}
           ORG: ${{ github.repository_owner }}
+          STATE: ${{ steps.invite.outputs.state }}
         run: |
-          gh issue comment "${{ github.event.issue.number }}" -R "${{ github.repository }}" --body "@$APPLICANT 已批准 🎉 邀请已发出：请查看邮箱，或打开 https://github.com/orgs/$ORG/invitation 点 **Join** 接受（7 天内有效）。"
+          if [ "$STATE" = "active" ]; then
+            msg="@$APPLICANT 已批准 🎉 你已经是成员了，直接打开 https://github.com/$ORG/shanghaitech-overseas-reimbursement 就能看到。"
+          else
+            msg="@$APPLICANT 已批准 🎉 邀请已发出：请查看邮箱，或打开 https://github.com/orgs/$ORG/invitation 点 **Join** 接受（7 天内有效）。"
+          fi
+          gh issue comment "${{ github.event.issue.number }}" -R "${{ github.repository }}" --body "$msg"
           gh issue close "${{ github.event.issue.number }}" -R "${{ github.repository }}" --reason completed
       - name: 失败时提示
         if: failure()
